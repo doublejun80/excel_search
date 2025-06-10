@@ -19,6 +19,54 @@ class CSVSearchApp:
         self.selected_columns = []  # 선택된 열 저장용
         
         self.setup_ui()
+
+    def show_all_data(self):
+        if not self.csv_file:
+            messagebox.showerror("오류", "먼저 CSV 파일을 선택해주세요.")
+            return
+        try:
+            encoding = self.encoding_var.get()
+            with open(self.csv_file, encoding=encoding, errors='replace') as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+            if not rows:
+                messagebox.showinfo("알림", "파일에 데이터가 없습니다.")
+                return
+            # 트리뷰 생성 및 초기화
+            for widget in self.result_frame.winfo_children():
+                widget.destroy()
+            columns = rows[0]
+            self.result_tree = ttk.Treeview(self.result_frame, columns=columns, show="headings")
+            for col in columns:
+                self.result_tree.heading(col, text=col)
+                self.result_tree.column(col, width=120, minwidth=60)
+            # 스크롤바 추가 (수직, 수평)
+            scrollbar_y = ttk.Scrollbar(self.result_frame, orient=tk.VERTICAL, command=self.result_tree.yview)
+            scrollbar_x = ttk.Scrollbar(self.result_frame, orient=tk.HORIZONTAL, command=self.result_tree.xview)
+            self.result_tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+            scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+            scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+            self.result_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            # 데이터 삽입
+            for row in rows[1:]:
+                self.result_tree.insert("", tk.END, values=row)
+            self.status_var.set(f"전체 데이터 표시: {len(rows)-1}행")
+        except Exception as e:
+            messagebox.showerror("오류", f"전체 데이터 표시 중 오류: {str(e)}")
+
+        self.root = root
+        self.root.title("CSV 검색 도구")
+        self.root.geometry("1000x600")
+        self.root.minsize(800, 500)
+        
+        self.csv_file = None
+        self.results = []
+        self.headers = []
+        self.header_vars = []  # 체크박스 변수 저장
+        self.found_rows = []  # 검색 결과 저장용
+        self.selected_columns = []  # 선택된 열 저장용
+        
+        self.setup_ui()
         
     def setup_ui(self):
         # 전체 프레임 구성
@@ -49,6 +97,9 @@ class CSVSearchApp:
         ttk.Entry(file_entry_frame, textvariable=self.file_path_var).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         
         ttk.Button(file_frame, text="파일 선택", command=self.select_file).pack(fill=tk.X, padx=5, pady=5)
+        
+        # 전체보기 버튼 추가
+        ttk.Button(file_frame, text="전체보기", command=self.show_all_data).pack(fill=tk.X, padx=5, pady=(0,5))
         
         # 인코딩 선택
         encoding_frame = ttk.Frame(file_frame)
